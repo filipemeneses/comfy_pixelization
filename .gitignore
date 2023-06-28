@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+pixelization
+checkpoints/**
+!checkpoints/.keep
