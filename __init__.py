@@ -197,7 +197,7 @@ class Pixelization:
 
         self.model.to(devices.device)
 
-        upscale_after = False
+        upscale_after = True
 
         image = tensor2pil(image)
         image = image.resize((image.width * 4 // pixel_size, image.height * 4 // pixel_size))

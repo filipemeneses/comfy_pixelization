@@ -4,7 +4,12 @@
 ComfyUI node that pixelizes images
 
 # Workflow preview
+
 ![](preview.png)
+
+## Original
+
+![](preview-original.png)
 
 
 # Installation
