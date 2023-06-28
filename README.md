@@ -13,7 +13,7 @@ ComfyUI node that pixelizes images
 2. Go to folder
 3. Run `python ./install.py` 
 4. Download checkpoints to `ComfyUI/custom_nodes/ComfyUI_pixelization/checkpoints`
-5. Use use node `Pixelization > Pixelization` to generate pixelated image
+5. Use node `Pixelization > Pixelization` to generate pixelated image
 
 ## Models
 
