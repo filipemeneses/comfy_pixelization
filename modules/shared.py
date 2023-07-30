@@ -1,4 +1,3 @@
-import argparse
 import datetime
 import json
 import os
@@ -12,22 +11,6 @@ from . import errors,shared_items,devices
 
 demo = None
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--data-dir", type=str, default=os.path.dirname(os.path.dirname(os.path.realpath(__file__))), help="base path where all user data is stored",)
-parser.add_argument("--precision", type=str, help="evaluate at this precision", choices=["full", "autocast"], default="autocast")
-parser.add_argument("--medvram", action='store_true', help="enable stable diffusion model optimizations for sacrificing a little speed for low VRM usage")
-parser.add_argument("--lowvram", action='store_true', help="enable stable diffusion model optimizations for sacrificing a lot of speed for very low VRM usage")
-parser.add_argument("--lowram", action='store_true', help="load stable diffusion checkpoint weights to VRAM instead of RAM")
-
-if os.environ.get('IGNORE_CMD_ARGS_ERRORS', None) is None:
-    cmd_opts = parser.parse_args()
-else:
-    cmd_opts, _ = parser.parse_known_args()
-
-cmd_opts.disable_safe_unpickle = False
-cmd_opts.precision = "full"
-cmd_opts.use_cpu = "" ## all?
-cmd_opts.device_id = None
 
 sd_upscalers = []
 
@@ -36,13 +19,12 @@ restricted_opts = {
 }
 
 devices.device, devices.device_interrogate, devices.device_gfpgan, devices.device_esrgan, devices.device_codeformer = \
-    (devices.cpu if any(y in cmd_opts.use_cpu for y in [x, 'all']) else devices.get_optimal_device() for x in ['sd', 'interrogate', 'gfpgan', 'esrgan', 'codeformer'])
+    (devices.cpu if any(y in "" for y in [x, 'all']) else devices.get_optimal_device() for x in ['sd', 'interrogate', 'gfpgan', 'esrgan', 'codeformer'])
 
 device = devices.device
-weight_load_location = None if cmd_opts.lowram else "cpu"
+weight_load_location = "cpu"
 
-#batch_cond_uncond = cmd_opts.always_batch_cond_uncond or not (cmd_opts.lowvram or cmd_opts.medvram)
-parallel_processing_allowed = not cmd_opts.lowvram and not cmd_opts.medvram
+parallel_processing_allowed = False
 xformers_available = False
 
 
@@ -102,14 +84,10 @@ class Options:
     def __setattr__(self, key, value):
         if self.data is not None:
             if key in self.data or key in self.data_labels:
-                assert not cmd_opts.freeze_settings, "changing settings is disabled"
 
                 info = opts.data_labels.get(key, None)
                 comp_args = info.component_args if info else None
                 if isinstance(comp_args, dict) and comp_args.get('visible', True) is False:
-                    raise RuntimeError(f"not possible to set {key} because it is restricted")
-
-                if cmd_opts.hide_ui_dir_config and key in restricted_opts:
                     raise RuntimeError(f"not possible to set {key} because it is restricted")
 
                 self.data[key] = value
@@ -159,7 +137,6 @@ class Options:
         return data_label.default
 
     def save(self, filename):
-        assert not cmd_opts.freeze_settings, "saving settings is disabled"
 
         with open(filename, "w", encoding="utf8") as file:
             json.dump(self.data, file, indent=4)

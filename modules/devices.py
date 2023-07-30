@@ -25,9 +25,6 @@ def extract_device_id(args, name):
 def get_cuda_device_string():
     from . import shared
 
-    if shared.cmd_opts.device_id is not None:
-        return f"cuda:{shared.cmd_opts.device_id}"
-
     return "cuda"
 
 
@@ -47,9 +44,6 @@ def get_optimal_device():
 
 def get_device_for(task):
     from . import shared
-
-    if task in shared.cmd_opts.use_cpu:
-        return cpu
 
     return get_optimal_device()
 
@@ -111,7 +105,7 @@ def autocast(disable=False):
     if disable:
         return contextlib.nullcontext()
 
-    if dtype == torch.float32 or shared.cmd_opts.precision == "full":
+    if dtype == torch.float32:
         return contextlib.nullcontext()
 
     return torch.autocast("cuda")
@@ -128,23 +122,15 @@ class NansException(Exception):
 def test_for_nans(x, where):
     from . import shared
 
-    if shared.cmd_opts.disable_nan_check:
-        return
-
     if not torch.all(torch.isnan(x)).item():
         return
 
     if where == "unet":
         message = "A tensor with all NaNs was produced in Unet."
 
-        if not shared.cmd_opts.no_half:
-            message += " This could be either because there's not enough precision to represent the picture, or because your video card does not support half type. Try setting the \"Upcast cross attention layer to float32\" option in Settings > Stable Diffusion or using the --no-half commandline argument to fix this."
-
     elif where == "vae":
         message = "A tensor with all NaNs was produced in VAE."
 
-        if not shared.cmd_opts.no_half and not shared.cmd_opts.no_half_vae:
-            message += " This could be because there's not enough precision to represent the picture. Try adding --no-half-vae commandline argument to fix this."
     else:
         message = "A tensor with all NaNs was produced."
 
