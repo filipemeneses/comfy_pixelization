@@ -3,6 +3,8 @@ import torch, os
 import numpy as np
 import torchvision.transforms as transforms
 from PIL import Image
+import comfy.utils
+import asyncio
 
 from .modules import devices, shared
 from .pixelization.models.networks import define_G
@@ -167,6 +169,25 @@ def pil2tensor(image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 
+def wait_for_async(async_fn, loop=None):
+    res = []
+
+    async def run_async():
+        r = await async_fn()
+        res.append(r)
+
+    if loop is None:
+        try:
+            loop = asyncio.get_event_loop()
+        except:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(run_async())
+
+    return res[0]
+
+    
 class Pixelization:
     model = None
 
@@ -186,20 +207,12 @@ class Pixelization:
 
     FUNCTION = "pixelize"
 
-    CATEGORY = "Pixelization"
+    CATEGORY = "image"
 
-    def pixelize(self, image, pixel_size):
-        if self.model is None:
-            model = Model()
-            model.load()
+    OUTPUT_IS_LIST = (True,)
+    OUTPUT_NODE = True
 
-            self.model = model
-
-        self.model.to(devices.device)
-
-        upscale_after = True
-
-        image = tensor2pil(image)
+    async def run_pixelatization(self, image, pixel_size, upscale_after):
         image = image.resize((image.width * 4 // pixel_size, image.height * 4 // pixel_size))
 
         with torch.no_grad():
@@ -213,11 +226,34 @@ class Pixelization:
 
             image = to_image(out_t, pixel_size=pixel_size, upscale_after=upscale_after)
 
-        self.model.to(devices.cpu)
-
         image = pil2tensor(image)
 
-        return (image,)
+        return image
+
+    def pixelize(self, image, pixel_size):
+        if self.model is None:
+            model = Model()
+            model.load()
+
+            self.model = model
+
+        self.model.to(devices.device)
+
+        upscale_after = True
+
+        tensor = image*255
+        tensor = np.array(tensor, dtype=np.uint8)
+
+        pbar = comfy.utils.ProgressBar(tensor.shape[0])
+        all_images = []
+        for i in range(tensor.shape[0]):
+            image = Image.fromarray(tensor[i])
+            all_images.append((
+                wait_for_async(lambda: self.run_pixelatization(image, pixel_size, upscale_after))
+            ))
+            pbar.update(1)
+
+        return (all_images,)
 
 
 
