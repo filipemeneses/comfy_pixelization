@@ -6,9 +6,37 @@ from PIL import Image
 import comfy.utils
 import asyncio
 
-from .modules import devices, shared
 from .pixelization.models.networks import define_G
 from .pixelization.models import c2pGen
+
+import sys
+
+if sys.platform == "darwin":
+    import mac_specific
+
+def has_mps() -> bool:
+    if sys.platform != "darwin":
+        return False
+    else:
+        return mac_specific.has_mps
+    
+def get_cuda_device_string():
+    return "cuda"
+
+def get_optimal_device_name():
+    if torch.cuda.is_available():
+        return get_cuda_device_string()
+
+    if has_mps():
+        return "mps"
+
+    return "cpu"
+
+def get_optimal_device():
+    return torch.device(get_optimal_device_name())
+
+
+device = get_optimal_device()
 
 # From https://github.com/AUTOMATIC1111/stable-diffusion-webui-pixelization/tree/master
 
@@ -216,10 +244,10 @@ class Pixelization:
         image = image.resize((image.width * 4 // pixel_size, image.height * 4 // pixel_size))
 
         with torch.no_grad():
-            in_t = process(image).to(devices.device)
+            in_t = process(image).to(device)
 
             feature = self.model.G_A_net.module.RGBEnc(in_t)
-            code = torch.asarray(pixelize_code, device=devices.device).reshape((1, 256, 1, 1))
+            code = torch.asarray(pixelize_code, device=device).reshape((1, 256, 1, 1))
             adain_params = self.model.G_A_net.module.MLP(code)
             images = self.model.G_A_net.module.RGBDec(feature, adain_params)
             out_t = self.model.alias_net(images)
@@ -237,7 +265,7 @@ class Pixelization:
 
             self.model = model
 
-        self.model.to(devices.device)
+        self.model.to(device)
 
         upscale_after = True
 
