@@ -11,14 +11,11 @@ from .pixelization.models import c2pGen
 
 import sys
 
-if sys.platform == "darwin":
-    import mac_specific
-
 def has_mps() -> bool:
     if sys.platform != "darwin":
         return False
     else:
-        return mac_specific.has_mps
+        return torch.backends.mps.is_available()
     
 def get_cuda_device_string():
     return "cuda"
