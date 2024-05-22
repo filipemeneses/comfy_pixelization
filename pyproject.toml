@@ -1,0 +1,14 @@
+[project]
+name = "comfy_pixelization"
+description = "ComfyUI node that pixelizes images."
+version = "1.0.0"
+license = "LICENSE"
+
+[project.urls]
+Repository = "https://github.com/filipemeneses/comfy_pixelization"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "comfy_pixelization"
+Icon = ""
