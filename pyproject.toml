@@ -9,6 +9,6 @@ Repository = "https://github.com/filipemeneses/comfy_pixelization"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "filipemeneses"
 DisplayName = "comfy_pixelization"
 Icon = ""
