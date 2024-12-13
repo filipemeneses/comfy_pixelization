@@ -235,7 +235,7 @@ class Pixelization:
     CATEGORY = "image"
 
     OUTPUT_IS_LIST = (True,)
-    OUTPUT_NODE = True
+    OUTPUT_NODE = False
 
     async def run_pixelatization(self, image, pixel_size, upscale_after):
         image = image.resize((image.width * 4 // pixel_size, image.height * 4 // pixel_size))
