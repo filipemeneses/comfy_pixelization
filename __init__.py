@@ -1,4 +1,3 @@
-
 import torch, os
 import numpy as np
 import torchvision.transforms as transforms
@@ -224,7 +223,8 @@ class Pixelization:
         return {
             "required": {
                 "image": ("IMAGE",),
-                "pixel_size": ("INT", {"default": 4, "min": 1, "max": 16}),
+                "pixel_size": ("INT", {"default": 4, "min": 1, "max": 32}),
+                "upscale_after": ("BOOLEAN", {"default": True}),
             }
         }
 
@@ -255,7 +255,7 @@ class Pixelization:
 
         return image
 
-    def pixelize(self, image, pixel_size):
+    def pixelize(self, image, pixel_size, upscale_after):
         if self.model is None:
             model = Model()
             model.load()
@@ -263,8 +263,6 @@ class Pixelization:
             self.model = model
 
         self.model.to(device)
-
-        upscale_after = True
 
         tensor = image*255
         tensor = np.array(tensor, dtype=np.uint8)
