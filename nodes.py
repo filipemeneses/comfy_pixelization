@@ -139,11 +139,15 @@ def rescale_image(img):
 
 @dataclass
 class PixelizationOptions:
-    pixel_size: int = 4
-    upscale_after: bool = True
-    original_img: Image.Image | None = None
-    copy_hue: bool = False
-    copy_sat: bool = False
+    pixel_size: int = 4  # Size of pixelation
+    upscale_after: bool = True  # Upscale the pixelized image after processing
+    original_img: Image.Image | None = None  # Original image for color copying
+    copy_hue: bool = False  # Copy hue from the original image
+    copy_sat: bool = False  # Copy saturation from the original image
+    copy_val: bool = False  # Copy value (brightness) from the original image
+    scale_value: float = 1.0  # Scale value for the pixelization (not used in this implementation)
+    restore_dark: int = 15  # Restore dark pixels
+    restore_bright: int = 1  # Restore bright pixels
 
 
 def to_image(tensor, options: PixelizationOptions):
@@ -158,7 +162,7 @@ def to_image(tensor, options: PixelizationOptions):
 
     if options.original_img and (options.copy_hue or options.copy_sat):
         original_img = options.original_img.resize((width, height), resample=Image.Resampling.NEAREST)
-        img = color_image(img, original_img, options.copy_hue, options.copy_sat)
+        img = color_image(img, original_img, options)
 
     if options.upscale_after:
         img = img.resize(
@@ -172,7 +176,7 @@ def to_image(tensor, options: PixelizationOptions):
     return img
 
 
-def color_image(img, original_img, copy_hue, copy_sat):
+def color_image(img, original_img, options: PixelizationOptions):
     """
     Color the pixelized image based on the original image's hue and saturation.
     """
@@ -193,9 +197,15 @@ def color_image(img, original_img, copy_hue, copy_sat):
             r, g, b = pixel
             h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
 
+            if options.copy_val:
+                if v < 0.5:
+                    v = v * (100 - options.restore_dark) / 100 + original_v * options.restore_dark / 100
+                else:
+                    v = v * (100 - options.restore_bright) / 100 + original_v * options.restore_bright / 100
+
             r, g, b = colorsys.hsv_to_rgb(
-                original_h if copy_hue else h,
-                original_s if copy_sat else s,
+                original_h if options.copy_hue else h,
+                original_s if options.copy_sat else s,
                 v,
             )
             colored_img.putpixel((x, y), (int(r * 255), int(g * 255), int(b * 255)))
@@ -244,6 +254,9 @@ class Pixelization:
                 "upscale_after": ("BOOLEAN", {"default": True}),
                 "copy_hue": ("BOOLEAN", {"default": False}),
                 "copy_sat": ("BOOLEAN", {"default": False}),
+                "copy_val": ("BOOLEAN", {"default": False}),
+                "restore_dark": ("INT", {"default": 15, "min": 0, "max": 100}),
+                "restore_bright": ("INT", {"default": 1, "min": 0, "max": 100}),
             }
         }
 
@@ -275,7 +288,17 @@ class Pixelization:
 
         return image
 
-    def pixelize(self, image, pixel_size, upscale_after, copy_hue, copy_sat):
+    def pixelize(
+        self,
+        image,
+        pixel_size,
+        upscale_after,
+        copy_hue,
+        copy_sat,
+        copy_val,
+        restore_dark,
+        restore_bright,
+    ):
         self.model.to(self.device)
 
         tensor = image * 255
@@ -292,6 +315,9 @@ class Pixelization:
                 original_img=image,
                 copy_hue=copy_hue,
                 copy_sat=copy_sat,
+                copy_val=copy_val,
+                restore_dark=restore_dark,
+                restore_bright=restore_bright,
             )
 
             all_images.append(wait_for_async(lambda: self.run_pixelization(image, pixelize_options)))
