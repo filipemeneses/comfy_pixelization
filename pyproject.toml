@@ -3,6 +3,7 @@ name = "comfy_pixelization"
 description = "ComfyUI node that pixelizes images."
 version = "1.1.0"
 license = "LICENSE"
+requires-python = ">=3.10"
 
 dependencies = [
   "torch==2.7.1",
