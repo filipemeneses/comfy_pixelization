@@ -4,6 +4,13 @@ description = "ComfyUI node that pixelizes images."
 version = "1.1.0"
 license = "LICENSE"
 
+dependencies = [
+  "torch==2.7.1",
+  "torchvision==0.22.1",
+  "numpy==2.3.0",
+  "pillow==11.2.1",
+]
+
 [project.urls]
 Repository = "https://github.com/filipemeneses/comfy_pixelization"
 #  Used by Comfy Registry https://comfyregistry.org
