@@ -5,8 +5,8 @@ from PIL import Image
 import comfy.utils
 import asyncio
 
-from .pixelization.models.networks import define_G
-from .pixelization.models import c2pGen
+from .Pixelization.models import c2pGen
+from .Pixelization.models.networks import define_G
 
 import sys
 
