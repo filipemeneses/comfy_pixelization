@@ -267,7 +267,9 @@ class Pixelization:
 
     FUNCTION = "pixelize"
 
-    CATEGORY = "image"
+    # This folds the node into the same category as comfyui-post-processing-nodes.
+    # Seems like the best place for it, pixelization is also post-processing.
+    CATEGORY = "postprocessing/Effects"
 
     OUTPUT_IS_LIST = (True,)
     OUTPUT_NODE = False
