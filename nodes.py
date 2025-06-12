@@ -271,6 +271,20 @@ class Pixelization:
     # Seems like the best place for it, pixelization is also post-processing.
     CATEGORY = "postprocessing/Effects"
 
+    DESCRIPTION = "\n".join(
+        [
+            "Pixelization node for ComfyUI, based on the 'Make Your Own Sprites' paper.",
+            "This node pixelizes images using a pre-trained model and allows for color copying from the original image.",
+            "",
+            "* upscale_after: If true, the pixelized image will be upscaled after processing with NEAREST resampling.",
+            "* copy_hue: Copy the hue from the original image when pixelizing.",
+            "* copy_sat: Copy the saturation from the original image when pixelizing.",
+            "* copy_val: Copy the value (brightness) from the original image when pixelizing.",
+            "* restore_dark: Restore dark pixels by a percentage (0-100) of the original image's value.",
+            "* restore_bright: Restore bright pixels by a percentage (0-100) of the original image's value.",
+        ]
+    )
+
     OUTPUT_IS_LIST = (True,)
     OUTPUT_NODE = False
 
