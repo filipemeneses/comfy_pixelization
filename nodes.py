@@ -12,6 +12,9 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
+# The submodule imports relative modules, so we need to ensure the Pixelization directory is in the path.
+if "Pixelization" not in sys.modules:
+    sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "/Pixelization")
 from .Pixelization.models import c2pGen
 from .Pixelization.models.networks import define_G
 from .Pixelization.test_pro import MLP_code
