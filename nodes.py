@@ -65,6 +65,7 @@ class TorchHijackForC2pGen:
         if filename == "./pixelart_vgg19.pth":
             filename = path_pixelart_vgg19
 
+        kwargs.setdefault("map_location", get_optimal_device())
         return torch.load(filename, *args, **kwargs)
 
 
@@ -103,18 +104,18 @@ class Model(torch.nn.Module):
             raise RuntimeError(error_message)
 
         with torch.no_grad():
-            self.G_A_net = define_G(3, 3, 64, "c2pGen", "instance", False, "normal", 0.02, [0])
-            self.alias_net = define_G(3, 3, 64, "antialias", "instance", False, "normal", 0.02, [0])
+            gpu_ids = [0] if torch.cuda.is_available() else []
+            self.G_A_net = define_G(3, 3, 64, "c2pGen", "instance", False, "normal", 0.02, gpu_ids)
+            self.alias_net = define_G(3, 3, 64, "antialias", "instance", False, "normal", 0.02, gpu_ids)
 
-            G_A_state = torch.load(path_160_net_G_A)
-            for p in list(G_A_state.keys()):
-                G_A_state["module." + str(p)] = G_A_state.pop(p)
-            self.G_A_net.load_state_dict(G_A_state)
+            device = get_optimal_device()
+            G_A_state = torch.load(path_160_net_G_A, map_location=device)
+            model_to_load_G_A = self.G_A_net.module if isinstance(self.G_A_net, torch.nn.DataParallel) else self.G_A_net
+            model_to_load_G_A.load_state_dict(G_A_state)
 
-            alias_state = torch.load(path_alias_net)
-            for p in list(alias_state.keys()):
-                alias_state["module." + str(p)] = alias_state.pop(p)
-            self.alias_net.load_state_dict(alias_state)
+            alias_state = torch.load(path_alias_net, map_location=device)
+            model_to_load_alias = self.alias_net.module if isinstance(self.alias_net, torch.nn.DataParallel) else self.alias_net
+            model_to_load_alias.load_state_dict(alias_state)
 
 
 def rescale_image(img):
@@ -224,25 +225,6 @@ def pil2tensor(image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 
-def wait_for_async(async_fn, loop=None):
-    res = []
-
-    async def run_async():
-        r = await async_fn()
-        res.append(r)
-
-    if loop is None:
-        try:
-            loop = asyncio.get_event_loop()
-        except:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(run_async())
-
-    return res[0]
-
-
 class Pixelization:
     def __init__(self):
         self.model = Model()
@@ -290,15 +272,16 @@ class Pixelization:
 
     async def run_pixelization(self, image, options):
         image = image.resize((image.width * 4 // options.pixel_size, image.height * 4 // options.pixel_size))
+        G_A_net_model = self.model.G_A_net.module if isinstance(self.model.G_A_net, torch.nn.DataParallel) else self.model.G_A_net
 
         with torch.no_grad():
             in_t = rescale_image(image).to(self.device)
 
             code = torch.asarray(MLP_code, device=self.device).reshape((1, 256, 1, 1))
-            adain_params = self.model.G_A_net.module.MLP(code)
+            adain_params = G_A_net_model.MLP(code)
 
-            feature = self.model.G_A_net.module.RGBEnc(in_t)
-            images = self.model.G_A_net.module.RGBDec(feature, adain_params)
+            feature = G_A_net_model.RGBEnc(in_t)
+            images = G_A_net_model.RGBDec(feature, adain_params)
             out_t = self.model.alias_net(images)
 
             image = to_image(out_t, options)
@@ -307,7 +290,7 @@ class Pixelization:
 
         return image
 
-    def pixelize(
+    async def pixelize(
         self,
         image,
         pixel_size,
@@ -339,7 +322,7 @@ class Pixelization:
                 restore_bright=restore_bright,
             )
 
-            all_images.append(wait_for_async(lambda: self.run_pixelization(image, pixelize_options)))
+            all_images.append(await self.run_pixelization(image, pixelize_options))
             progressbar.update(1)
 
         return (all_images,)
