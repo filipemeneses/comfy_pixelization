@@ -1,4 +1,8 @@
 __pycache__/
+.mypy_cache/
 *.py[cod]
 checkpoints/**
 !checkpoints/.keep
+
+# VS Code files
+*.code-workspace
